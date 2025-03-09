@@ -12,7 +12,7 @@ export default function Card(props: CardProps) {
   return (
     <div
       className={classes(
-        "scrollbar-thin flex max-h-full w-[32rem] max-w-full flex-col items-center justify-between overflow-y-auto rounded-3xl bg-alveus-green p-5 shadow-sm scrollbar-thumb-alveus-green scrollbar-track-alveus-green-900",
+        "scrollbar-thin flex min-h-[100px] h-auto w-[32rem] min-w-[400px] max-w-full flex-col items-center justify-between overflow-y-auto rounded-3xl bg-black p-5 shadow-sm scrollbar-thumb-gray scrollbar-track-gray-900",
         className,
       )}
     >
@@ -21,7 +21,9 @@ export default function Card(props: CardProps) {
           {title}
         </h2>
       )}
-      {children}
+      <div className="w-full h-full flex flex-col items-center justify-center">
+        {children}
+      </div>
     </div>
   );
 }

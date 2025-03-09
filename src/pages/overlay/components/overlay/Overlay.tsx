@@ -6,14 +6,13 @@ import {
   useMemo,
   type SetStateAction,
   type Dispatch,
+  useLayoutEffect,
 } from "react";
 
 import Welcome from "../../../../components/Welcome";
 import IconWelcome from "../../../../components/icons/IconWelcome";
-import IconAmbassadors from "../../../../components/icons/IconAmbassadors";
 import IconSettings from "../../../../components/icons/IconSettings";
 
-import { useAmbassadors } from "../../../../hooks/useAmbassadors";
 import { classes } from "../../../../utils/classes";
 import { visibleUnderCursor } from "../../../../utils/dom";
 
@@ -22,10 +21,11 @@ import useChatCommand from "../../../../hooks/useChatCommand";
 import useSettings from "../../hooks/useSettings";
 import useSleeping from "../../hooks/useSleeping";
 
-import AmbassadorsOverlay from "./Ambassadors";
 import SettingsOverlay from "./Settings";
 
 import Buttons from "../Buttons";
+
+import Draggable from 'react-draggable';
 
 // Show command-triggered popups for 10s
 const commandTimeout = 10_000;
@@ -35,19 +35,13 @@ const overlayOptions = [
     key: "welcome",
     type: "primary",
     icon: IconWelcome,
-    title: "Welcome to Alveus",
+    title: "Options",
     component: (props: OverlayOptionProps) => (
-      <Welcome
-        className={classes("absolute top-0 left-0 mx-4 my-6", props.className)}
+      // Remove the Draggable wrapper and just render the Welcome component directly
+      <Welcome 
+        className={classes(props.className)}
       />
     ),
-  },
-  {
-    key: "ambassadors",
-    type: "primary",
-    icon: IconAmbassadors,
-    title: "Explore our Ambassadors",
-    component: AmbassadorsOverlay,
   },
   {
     key: "settings",
@@ -63,16 +57,8 @@ export const isValidOverlayKey = (key: string) =>
 
 export type OverlayKey = (typeof overlayOptions)[number]["key"] | "";
 
-type ActiveAmbassadorState = {
-  key?: string;
-  isCommand?: boolean;
-};
-
 export interface OverlayOptionProps {
-  context: {
-    activeAmbassador: ActiveAmbassadorState;
-    setActiveAmbassador: Dispatch<SetStateAction<ActiveAmbassadorState>>;
-  };
+  context: Record<string, never>; // Empty context since we removed ambassadors
   className?: string;
 }
 
@@ -88,15 +74,19 @@ export default function Overlay() {
     off: removeSleepListener,
   } = useSleeping();
 
-  const ambassadors = useAmbassadors();
-
-  const [activeAmbassador, setActiveAmbassador] =
-    useState<ActiveAmbassadorState>({});
   const [visibleOption, setVisibleOption] = useState<OverlayKey>(
     settings.openedMenu.value,
   );
   const timeoutRef = useRef<NodeJS.Timeout>(null);
   const awakingRef = useRef(false);
+
+  // Add this state to track component positions
+  const [componentPositions, setComponentPositions] = useState<{[key: string]: {x: number, y: number}}>({});
+
+  // Use useRef to store measurements and useEffect to update state only once
+  const [cardDimensions, setCardDimensions] = useState<{[key: string]: {width: number, height: number}}>({});
+  const measuredCardsRef = useRef<Set<string>>(new Set());
+  const cardRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
 
   // update setting when opened menu changes
   useEffect(() => {
@@ -113,18 +103,16 @@ export default function Overlay() {
     useCallback(
       (command: string) => {
         if (!settings.disableChatPopup.value) {
-          if (Object.keys(ambassadors ?? {}).includes(command))
-            setActiveAmbassador({ key: command, isCommand: true });
-          else if (command !== "welcome") return;
+          // Only respond to "welcome" command
+          if (command !== "welcome") return;
 
-          // Show the card
-          setVisibleOption(command === "welcome" ? "welcome" : "ambassadors");
+          // Show the welcome card
+          setVisibleOption("welcome");
 
           // Dismiss the overlay after a delay
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           timeoutRef.current = setTimeout(() => {
             setVisibleOption("");
-            setActiveAmbassador({});
           }, commandTimeout);
 
           // Track that we're waking up, so that we don't immediately clear the timeout, and wake the overlay
@@ -132,7 +120,7 @@ export default function Overlay() {
           wake(commandTimeout);
         }
       },
-      [settings.disableChatPopup.value, ambassadors, wake],
+      [settings.disableChatPopup.value, wake],
     ),
   );
 
@@ -184,14 +172,39 @@ export default function Overlay() {
       document.body.removeEventListener("dblclick", bodyDblClick, true);
   }, [bodyDblClick]);
 
-  // Generate the context for the overlay options
-  const context = useMemo<OverlayOptionProps["context"]>(
-    () => ({
-      activeAmbassador,
-      setActiveAmbassador,
-    }),
-    [activeAmbassador],
-  );
+  // Generate empty context since we removed ambassadors
+  const context = useMemo(() => ({}), []);
+
+  // Update the setVisibleOption function
+  const handleOptionClick = (key: OverlayKey, position?: {x: number, y: number}) => {
+    setVisibleOption(key);
+    if (position && key) {
+      setComponentPositions(prev => ({ ...prev, [key]: position }));
+    }
+  };
+
+  // Use useLayoutEffect to measure after DOM updates but before paint
+  useLayoutEffect(() => {
+    // Only measure cards that haven't been measured yet
+    overlayOptions.forEach(option => {
+      const key = option.key;
+      if (
+        visibleOption === key && 
+        cardRefs.current[key] && 
+        !measuredCardsRef.current.has(key)
+      ) {
+        const element = cardRefs.current[key];
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          setCardDimensions(prev => ({
+            ...prev,
+            [key]: { width: rect.width, height: rect.height }
+          }));
+          measuredCardsRef.current.add(key);
+        }
+      }
+    });
+  }, [visibleOption, overlayOptions]);
 
   return (
     <div
@@ -206,21 +219,38 @@ export default function Overlay() {
       )}
     >
       <Buttons
-        options={overlayOptions}
-        onClick={setVisibleOption}
+        options={[...overlayOptions]}
+        onClick={handleOptionClick}
         active={visibleOption}
+        cardDimensions={cardDimensions}
       />
-      <div className="relative h-full w-full">
-        {overlayOptions.map((option) => (
-          <option.component
-            key={option.key}
-            context={context}
-            className={classes(
-              "transition-[opacity,visibility,transform,translate] will-change-[opacity,transform,translate]",
-              visibleOption !== option.key && hiddenClass,
-            )}
-          />
-        ))}
+      <div id="overlay-container" className="relative h-full w-full">
+        {overlayOptions.map((option) => {
+          const position = componentPositions[option.key] || {x: 20, y: 20};
+          
+          return (
+            <div 
+              key={option.key}
+              ref={(el) => { cardRefs.current[option.key] = el; }}
+              className={classes(
+                "absolute transition-[opacity,visibility]",
+                visibleOption !== option.key && hiddenClass
+              )}
+              style={{
+                left: `${position.x}px`,
+                top: `${position.y}px`
+              }}
+            >
+              <option.component
+                context={context}
+                className={classes(
+                  "transition-[opacity,visibility]",
+                  visibleOption !== option.key && hiddenClass,
+                )}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

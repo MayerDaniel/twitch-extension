@@ -3,8 +3,6 @@ import tmi, { ChatUserstate } from "tmi.js";
 
 import { typeSafeObjectEntries } from "../utils/helpers";
 
-import { useAmbassadors } from "./useAmbassadors";
-
 import useChannel from "./useChannel";
 
 const parseCsvEnv = (env: string | undefined): string[] =>
@@ -45,19 +43,11 @@ export default function useChatCommand(callback: (command: string) => void) {
     [channel],
   );
 
-  const ambassadors = useAmbassadors();
   const commandsMap = useMemo(() => {
     const commands = new Map<string, string>();
-    if (ambassadors) {
-      typeSafeObjectEntries(ambassadors).forEach(([key, ambassador]) => {
-        ambassador.commands.forEach((command) => {
-          commands.set(command.toLowerCase(), key);
-        });
-      });
-    }
     commands.set("welcome", "welcome");
     return commands;
-  }, [ambassadors]);
+  }, []);
 
   const messageHandler = useCallback(
     (

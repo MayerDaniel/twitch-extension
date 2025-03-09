@@ -1,20 +1,6 @@
-import { useMemo } from "react";
-
-import IconGlobe from "./icons/IconGlobe";
-import IconAmazon from "./icons/IconAmazon";
-import IconInstagram from "./icons/IconInstagram";
-import IconTikTok from "./icons/IconTikTok";
-import IconTwitter from "./icons/IconTwitter";
-import IconBluesky from "./icons/IconBluesky";
-import IconPlay from "./icons/IconPlay";
-import IconGitHub from "./icons/IconGitHub";
-
-import useChannel from "../hooks/useChannel";
-
-import Card from "./Card";
-
-const socialClass =
-  "transition-[color,transform,scale] hover:scale-125 focus:scale-125 hover:text-highlight focus:text-highlight";
+import { useRef, useEffect } from "react";
+import OptionsTable, { OptionsTableHandle } from "./OptionsTable";
+import useTwitchAuth from "../hooks/useTwitchAuth";
 
 interface WelcomeProps {
   className?: string;
@@ -22,106 +8,44 @@ interface WelcomeProps {
 
 export default function Welcome(props: WelcomeProps) {
   const { className } = props;
-
-  const channel = useChannel();
-  const nonDefault = useMemo(
-    () => !channel || channel.toLowerCase() !== "alveussanctuary",
-    [channel],
-  );
+  const tableRef = useRef<OptionsTableHandle>(null);
+  
+  // Get Twitch auth data
+  const auth = useTwitchAuth();
+  
+  // Log authentication status on component mount
+  useEffect(() => {
+    if (auth) {
+      console.log("User is logged in with ID:", auth.userId);
+      
+      // You might want to add a row to your table with this info
+      if (tableRef.current) {
+        console.log(`Logged in: ${auth.userId}`);
+      }
+    } else {
+      console.log("User is not logged in or auth not yet available");
+      
+      if (tableRef.current) {
+        console.log("Not logged in");
+      }
+    }
+  }, [auth]);
+  
+  // Add initial rows when component mounts
+  const initialRows = [
+    { name: "1" },
+    { name: "2" },
+    { name: "3" }
+  ];
 
   return (
-    <Card className={className} title="Welcome to Alveus">
-      <p className="mt-2 mb-4">
-        Alveus Sanctuary is a 501(c)(3) non-profit organization that functions
-        as a wildlife sanctuary and as a virtual education center. These
-        non-releasable animals are educational ambassadors so viewers can learn
-        from and build a connection to them.
-      </p>
-
-      <ul className="mb-2 flex flex-wrap items-center justify-center gap-4">
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org"
-            rel="noreferrer"
-            target="_blank"
-            title="Website"
-          >
-            <IconGlobe size={32} />
-          </a>
-        </li>
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org/wishlist"
-            rel="noreferrer"
-            target="_blank"
-            title="Amazon Wishlist"
-          >
-            <IconAmazon size={32} />
-          </a>
-        </li>
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org/instagram"
-            rel="noreferrer"
-            target="_blank"
-            title="Instagram"
-          >
-            <IconInstagram size={32} />
-          </a>
-        </li>
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org/tiktok"
-            rel="noreferrer"
-            target="_blank"
-            title="TikTok"
-          >
-            <IconTikTok size={32} />
-          </a>
-        </li>
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org/twitter"
-            rel="noreferrer"
-            target="_blank"
-            title="X (Twitter)"
-          >
-            <IconTwitter size={32} />
-          </a>
-        </li>
-        <li className={socialClass}>
-          <a
-            href="https://www.alveussanctuary.org/bluesky"
-            rel="noreferrer"
-            target="_blank"
-            title="Bluesky"
-          >
-            <IconBluesky size={32} />
-          </a>
-        </li>
-        {nonDefault && (
-          <li className={socialClass}>
-            <a
-              href="https://www.alveussanctuary.org/live"
-              rel="noreferrer"
-              target="_blank"
-              title="Live"
-            >
-              <IconPlay size={32} />
-            </a>
-          </li>
-        )}
-      </ul>
-
-      <a
-        className="flex w-fit items-center justify-center gap-1 text-xs transition-colors hover:text-highlight focus:text-highlight"
-        href="https://github.com/alveusgg/extension"
-        rel="noreferrer"
-        target="_blank"
-      >
-        Contribute on GitHub
-        <IconGitHub size={16} />
-      </a>
-    </Card>
+    <div>
+      <OptionsTable 
+        ref={tableRef}
+        className={className}
+        title="Welcome"
+        initialRows={initialRows}
+      />
+    </div>
   );
 }

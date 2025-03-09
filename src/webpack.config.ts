@@ -78,31 +78,9 @@ const config: webpack.Configuration = {
   },
   // We need three entry points, and three outputs w/ html
   entry: {
-    panel: "./src/pages/panel/index.tsx",
-    mobile: "./src/pages/panel/index.tsx",
     overlay: "./src/pages/overlay/index.tsx",
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: "src/template.html",
-      filename: "panel.html",
-      chunks: ["panel"],
-      templateParameters: {
-        process: {
-          env,
-        },
-      },
-    }),
-    new HtmlWebpackPlugin({
-      template: "src/template.html",
-      filename: "mobile.html",
-      chunks: ["mobile"],
-      templateParameters: {
-        process: {
-          env,
-        },
-      },
-    }),
     new HtmlWebpackPlugin({
       template: "src/template.html",
       filename: "video_overlay.html",
@@ -163,14 +141,6 @@ const config: webpack.Configuration = {
         exclude: /node_modules/,
         use: getTypeScriptLoader(),
       },
-      // Load typescript in @alveusgg packages
-      {
-        test: /\.tsx?$/,
-        include: new RegExp(
-          join("node_modules", "@alveusgg").replace(/\\/g, "\\\\"),
-        ),
-        use: getTypeScriptLoader(),
-      },
       // Load tailwind
       {
         test: /\.css$/i,
@@ -182,39 +152,6 @@ const config: webpack.Configuration = {
         test: /\.(png|jpe?g|gif|svg)$/i,
         exclude: /node_modules/,
         type: "asset",
-      },
-      // Load ambassador images in @alveusgg packages
-      {
-        test: /\.(png|jpe?g)$/,
-        include: [
-          new RegExp(
-            join(
-              "node_modules",
-              "@alveusgg",
-              "data",
-              "build",
-              "assets",
-              "ambassadors",
-            ).replace(/\\/g, "\\\\"),
-          ),
-          new RegExp(join("src", "assets", "winston").replace(/\\/g, "\\\\")),
-        ],
-        type: "asset",
-        generator: {
-          filename: (pathData) => {
-            if (!pathData.filename) return "";
-            const dir = basename(dirname(pathData.filename));
-            return `static/media/ambassadors/${dir}/[name].[contenthash][ext]`;
-          },
-        } as webpack.WebpackOptionsNormalized["module"]["generator"]["asset"],
-        use: [
-          {
-            loader: "webpack-image-resize-loader",
-            options: {
-              width: 550,
-            },
-          },
-        ],
       },
     ],
   },

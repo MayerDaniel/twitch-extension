@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from "react";
 
 import { classes } from "../../utils/classes";
-import { AmbassadorsProvider } from "../../hooks/useAmbassadors";
 
 import useHiddenCursor from "./hooks/useHiddenCursor";
 import useSettings from "./hooks/useSettings";
@@ -36,7 +35,6 @@ export default function App() {
   }, [addSleepListener, removeSleepListener, showCursor]);
 
   return (
-    <AmbassadorsProvider>
       <div
         className={classes(
           "relative mx-4 h-full w-full transition-opacity",
@@ -57,6 +55,5 @@ export default function App() {
       >
         <Overlay />
       </div>
-    </AmbassadorsProvider>
   );
 }
